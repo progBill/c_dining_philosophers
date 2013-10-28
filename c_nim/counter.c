@@ -20,26 +20,27 @@ typedef enum _state STATE;
 //
 // PARENT CODE
 //
-void parent(int runningTotal, int READ,int WRITE){
+void parent(int seed, int READ,int WRITE){
   STATE state;
   state=RUNNING;
+  int runningTotal=seed;
+
+  printf("runningTotal: %d\n", runningTotal);
 
   while(state != QUIT){
     read(READ, &msg, sizeof(msg));
     
     switch(state){
       case RUNNING:
-        if (msg.cmd == 'p'){// p for pickup
+        if (msg.cmd == 'a'){
+          runningTotal += msg.data;
+        }else if (msg.cmd == 's'){
           runningTotal -= msg.data;
         } 
-        if(runningTotal > 0){
-          DEF_MSG(msg, 't', runningTotal);// t for total
-        }else{
-          DEF_MSG(msg, 'q', runningTotal);// q for quit
-        }
+        DEF_MSG(msg, 'd', runningTotal);
         break;
       case QUIT:
-        DEF_MSG(msg, 'q', 0);// q for quit
+        DEF_MSG(msg, 'q', 0);
         break;
     } //end switch
     write(WRITE, &msg, sizeof(msg));
@@ -49,30 +50,39 @@ void parent(int runningTotal, int READ,int WRITE){
 //
 //  CHILD CODE
 //
-void child(int isHuman, int READ, int WRITE){
+void child(int READ, int WRITE){
   int running=1;  
   int numDelta;
 
-  DEF_MSG(msg, 'p', 0);
+  DEF_MSG(msg, 'a', 0);
   write(WRITE, &msg, sizeof(msg));
   
   while(running){
     read(READ, &msg, sizeof(msg));
-    
-    printf("%d: parent sent command %d with data: %d.\n", getpid(), msg.cmd, msg.data);
-
-    if(msg.cmd != 'q'){
-      printf("There are %d sticks left.\n", msg.data);
-      printf("Pick up how many sticks?\n");
-      scanf("%d", &numDelta);
+    printf("curNum: %d\n", msg.data);
+    printf("By much should the number changed?\n");
+    scanf("%d", &numDelta);
+// testing sign
+    if (numDelta > 0){
+      printf("Positive, I'll add %d\n", numDelta);
+    }else if (numDelta < 0){
+      printf("Negative, we'll add %d\n", numDelta);
+    }else{
+      printf("No change? alright, I'll just waste these flops, then.\n", numDelta);
     }
-
-    if (msg.data > 0){// still playing
-      if (msg.cmd == 't'){// parent thinks game is still going
-          DEF_MSG(msg, 'p', numDelta);
+//
+    if (msg.data > 0 && msg.data < 1000){
+      if (msg.cmd == 'd'){
+        if(numDelta > 0){
+          DEF_MSG(msg, 'a', numDelta);
+        }else{     
+          DEF_MSG(msg, 's', numDelta);  
         }
         write(WRITE, &msg, sizeof(msg));
-    }else{// all sticks are gone
+     }else{//got some weird ass command
+        running=0;
+      }
+    }else{// number is too high
       running=0;
     }
   } //end while
@@ -83,16 +93,15 @@ void child(int isHuman, int READ, int WRITE){
 //
 int main(){
   int fd_toChild[2], fd_toParent[2];
-  int pid, seed, human=1;
-  
+  int pid, seed;
+
   pipe(fd_toChild);
   pipe(fd_toParent);
 
-  printf("How many opponents would you like to play against?\n");
+  printf("What would you like the seed number to be?\n");
   scanf("%d", &seed);
 
   pid = fork();
-  printf("%d has arrived!\n", getpid());
 
   if (pid < 0){
     fprintf(stderr, "No fork for you!\n");
@@ -101,15 +110,15 @@ int main(){
     //parent here
     close(fd_toChild[PIPE_READ]);
     close(fd_toParent[PIPE_WRITE]);
-    parent(seed*4, fd_toParent[PIPE_READ], fd_toChild[PIPE_WRITE]);
+    parent(seed, fd_toParent[PIPE_READ], fd_toChild[PIPE_WRITE]);
     wait(0);
     printf("Parent closed!\n");
   }else{
     //child here
     close(fd_toChild[PIPE_WRITE]);
     close(fd_toParent[PIPE_READ]);
-    child(1, fd_toChild[PIPE_READ], fd_toParent[PIPE_WRITE]);
+    child(fd_toChild[PIPE_READ], fd_toParent[PIPE_WRITE]);
     printf("Child Closed!\n");
-  }
-}// end main
+}
+}
 
