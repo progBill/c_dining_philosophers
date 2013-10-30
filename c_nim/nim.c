@@ -20,7 +20,7 @@ typedef enum _state STATE;
 //
 // PARENT CODE
 //
-void parent(int runningTotal, int READ,int WRITE){
+void server(int runningTotal, int READ,int WRITE){
   STATE state;
   state=RUNNING;
 
@@ -59,7 +59,7 @@ void child(int isHuman, int READ, int WRITE){
   while(running){
     read(READ, &msg, sizeof(msg));
     
-    printf("%d: parent sent command %d with data: %d.\n", getpid(), msg.cmd, msg.data);
+    printf("%d: server sent command %d with data: %d.\n", getpid(), msg.cmd, msg.data);
 
     if(msg.cmd != 'q'){
       printf("There are %d sticks left.\n", msg.data);
@@ -68,7 +68,7 @@ void child(int isHuman, int READ, int WRITE){
     }
 
     if (msg.data > 0){// still playing
-      if (msg.cmd == 't'){// parent thinks game is still going
+      if (msg.cmd == 't'){// server thinks game is still going
           DEF_MSG(msg, 'p', numDelta);
         }
         write(WRITE, &msg, sizeof(msg));
@@ -98,10 +98,17 @@ int main(){
     fprintf(stderr, "No fork for you!\n");
     return -1;
   }else if(pid > 0){
-    //parent here
+    for(i=0; i < seed; ++i){
+      //make players here
+    }
+  }else{
+    // make server here
+  }
+/*
+    //server here
     close(fd_toChild[PIPE_READ]);
     close(fd_toParent[PIPE_WRITE]);
-    parent(seed*4, fd_toParent[PIPE_READ], fd_toChild[PIPE_WRITE]);
+    server(seed*4, fd_toParent[PIPE_READ], fd_toChild[PIPE_WRITE]);
     wait(0);
     printf("Parent closed!\n");
   }else{
@@ -111,5 +118,5 @@ int main(){
     child(1, fd_toChild[PIPE_READ], fd_toParent[PIPE_WRITE]);
     printf("Child Closed!\n");
   }
+*/
 }// end main
-
