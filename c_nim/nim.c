@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 //pipe constants for readability
 const int PIPE_READ=0;
 const int PIPE_WRITE=1;
+const int DEBUG = 1; //used to print wall of text to screen for debugging purposes
 
 //message to pass around
 struct _msg {
@@ -18,15 +20,20 @@ enum _state{RUNNING, QUIT};
 typedef enum _state STATE;
 
 //
-// PARENT CODE
+// SERVER CODE
 //
-void server(int runningTotal, int READ,int WRITE){
+void server(int numPlayers, int readFD[3][2],int writeFD[3][2]){
   STATE state;
   state=RUNNING;
-
+  int curPlayer=0, runningTotal=numPlayers*4;
+  if (DEBUG) printf("new server with pid: %d\n", getpid());
+  
   while(state != QUIT){
-    read(READ, &msg, sizeof(msg));
+
+    if (DEBUG) printf("%d says there are %d sticks.\n", getpid(), runningTotal);
     
+    read(readFD[curPlayer][0], &msg, sizeof(msg));
+      
     switch(state){
       case RUNNING:
         if (msg.cmd == 'p'){// p for pickup
@@ -42,29 +49,36 @@ void server(int runningTotal, int READ,int WRITE){
         DEF_MSG(msg, 'q', 0);// q for quit
         break;
     } //end switch
-    write(WRITE, &msg, sizeof(msg));
+    write(writeFD[curPlayer][1], &msg, sizeof(msg));
+    curPlayer = curPlayer + 1 % numPlayers;    
   } //end while
 }
 
 //
-//  CHILD CODE
+//  PLAYER CODE
 //
-void child(int isHuman, int READ, int WRITE){
+void player(int isHuman, int READ, int WRITE){
   int running=1;  
   int numDelta;
+
+  if(DEBUG) printf("new player with pid %d is child of %d\n", getpid(), getppid());
 
   DEF_MSG(msg, 'p', 0);
   write(WRITE, &msg, sizeof(msg));
   
   while(running){
+    if (DEBUG) printf("%d reading", getpid());
     read(READ, &msg, sizeof(msg));
-    
-    printf("%d: server sent command %d with data: %d.\n", getpid(), msg.cmd, msg.data);
+    if (DEBUG) printf("%d: read command %d with data: %d.\n", getpid(), msg.cmd, msg.data);
 
     if(msg.cmd != 'q'){
-      printf("There are %d sticks left.\n", msg.data);
-      printf("Pick up how many sticks?\n");
-      scanf("%d", &numDelta);
+      if (isHuman){
+        printf("There are %d sticks left.\n", msg.data);
+        printf("Pick up how many sticks?\n");
+        scanf("%d", &numDelta);
+      } else{
+        numDelta= 3;
+      }
     }
 
     if (msg.data > 0){// still playing
@@ -82,41 +96,39 @@ void child(int isHuman, int READ, int WRITE){
 // MAIN
 //
 int main(){
-  int fd_toChild[2], fd_toParent[2];
-  int pid, seed, human=1;
+  int i, pid, seed;
   
-  pipe(fd_toChild);
-  pipe(fd_toParent);
-
   printf("How many opponents would you like to play against?\n");
   scanf("%d", &seed);
 
+  int fd_toChild[seed][2], fd_toParent[seed][2];
+  pipe(fd_toChild);
+  pipe(fd_toParent);
+  int pids[seed];
+  // creates server & human player 
   pid = fork();
-  printf("%d has arrived!\n", getpid());
-
-  if (pid < 0){
-    fprintf(stderr, "No fork for you!\n");
-    return -1;
-  }else if(pid > 0){
-    for(i=0; i < seed; ++i){
-      //make players here
+  if (pid>0){// create computer players, 0 through seed-1
+    for (i=0; i < seed; ++i){// create X times
+      printf("preparing for baby making!\n");
+      if((pids[i] = fork()) == 0){// only kids from this fork get made 
+        if (DEBUG) printf("Making babies..\n");
+        player(0, fd_toChild[i][PIPE_READ],fd_toParent[i][PIPE_WRITE]);
+        exit(0);
+      }else if (pids[i] < 0){
+        printf("Big problems, boss.\n");
+      }else{
+        printf("I'm a daddy!\n");
+      }
+     server(seed, fd_toParent, fd_toChild);
     }
-  }else{
-    // make server here
-  }
-/*
-    //server here
-    close(fd_toChild[PIPE_READ]);
-    close(fd_toParent[PIPE_WRITE]);
-    server(seed*4, fd_toParent[PIPE_READ], fd_toChild[PIPE_WRITE]);
-    wait(0);
-    printf("Parent closed!\n");
-  }else{
-    //child here
-    close(fd_toChild[PIPE_WRITE]);
-    close(fd_toParent[PIPE_READ]);
-    child(1, fd_toChild[PIPE_READ], fd_toParent[PIPE_WRITE]);
-    printf("Child Closed!\n");
-  }
-*/
+}else{
+  player(1, fd_toChild[seed][PIPE_READ], fd_toParent[seed][PIPE_WRITE]);
+}
+if (DEBUG) printf("Out of proc making labrynth!\n");
+
+// the parent is really running the server 
+// and players and not participating in the game
+wait(0);
+return 0;
 }// end main
+
