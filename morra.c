@@ -18,42 +18,59 @@ MESSAGE msg; // msg buffer
 void parent(int fingerRead, int fingerWrite, int totalRead, int totalWrite){
   int running = 1, incFingers, incTotal, myFingers;
 
-  while (running){
-    myFingers = 3;
+  // just to make sure we're all ready
+  read(fingerRead, &msg, sizeof(msg));
 
+  while (running){
+    srand(time(0));
+    myFingers = rand() % 5 + 1;
+
+    //get players throw
     read(fingerRead, &msg, sizeof(msg));
     if (msg.cmd == 'f') {
       incFingers = msg.data; 
       if (msg.data == '0') running = 0;
     }
 
+    // get players total guess
     read(totalRead, &msg, sizeof(msg));
     if (msg.cmd == 't') incTotal = msg.data;
 
-    printf("incFingers: %d total Guess: %d\n", incFingers, incTotal);
-
+    // tell player computers throw
     DEF_MSG(msg, 'r', myFingers + incFingers);
     write(fingerWrite, &msg, sizeof(msg));
 
-    DEF_MSG(msg, 't', 6);
+    // tell player computer's guess
+    int myRand =  myFingers + rand() % 3 + 1;
+    printf("comp guess: %d", myRand);
+    DEF_MSG(msg, 't', myRand);
     write(totalWrite, &msg,sizeof(msg));
 
     }
 }
 
 void child(int fingerRead,  int fingerWrite, int totalRead, int totalWrite){
-  int running=1, numFingers, total, realTot, srvGuess;
+  int running=1, numFingers=0, total=0, realTot, srvGuess;
+
+  //not necessary, but a handshake before we start makes me feel better.
+  DEF_MSG(msg, 'r', 0);
+  write(fingerWrite, &msg, sizeof(msg));
 
   while(running){
     // get players throw, write it to pipe
-    printf("How many fingers to throw?  > ");
-    scanf("%d\n", &numFingers);
+    while (numFingers < 1 || numFingers > 5){
+      printf("How many fingers to throw?  > ");
+      scanf("%d", &numFingers);
+      if (numFingers < 1 || numFingers > 5) printf("%d isn't a legal choice.\n", numFingers);
+    }
+
     DEF_MSG(msg, 'f', numFingers); // f is for fingers
     write(fingerWrite, &msg, sizeof(msg));
 
     // get players guess, write it to pipe
     printf("What do you think the total will be?  > ");
-    scanf("%d\n", &total);
+    scanf("%d", &total);
+
     DEF_MSG(msg, 't', total); //t = total
     write(totalWrite, &msg, sizeof(msg));
 
@@ -66,20 +83,30 @@ void child(int fingerRead,  int fingerWrite, int totalRead, int totalWrite){
     read(totalRead, &msg, sizeof(msg));
     srvGuess = msg.data;
 
-    if (total < srvGuess && srvGuess <= realTot){
-      printf("Way to go, Loser.");
-    }else if(total <= realTot) {
-      printf("Yay, you're a winner!");
-    }else if (total > realTot && srvGuess > realTot ){
-      printf("There are no winners.");
-    }else if(total < realTot && total == srvGuess){
-      printf("You've tied!");
-    }else{
-      printf("I.. don't think it's even possible to be here.");
-    }
-    
-  }
+    //produce something like a game breakdown
+    printf("\nYou threw %d and guessed %d\nCmp threw %d\nReal Total was %d\n\n", numFingers, total, realTot - numFingers, realTot);
 
+    // determine who wins
+    /*
+      Cases, as well as I can figure them
+      *server guesses higher than player, but <= actual total
+      *player guessed <= actual total -- in this case, server guessed either lower than player or higher than real total
+      *player & server guess the same, and below actual total
+      *both guess too high
+    */
+    if (total < srvGuess && srvGuess <= realTot){
+      printf("Way to go, Loser.\n");
+    }else if(total <= realTot) {
+      printf("Yay, you're a winner!\n");
+    }else if (total > realTot && srvGuess > realTot ){
+      printf("There are no winners.\n");
+    }else if(total < realTot && total == srvGuess){
+      printf("You've tied!\n");
+    }else{
+      printf("Double KO!\n");
+    }
+    total = 0; numFingers = 0;
+  }
 }
 
 int main(){
@@ -99,11 +126,11 @@ pipe(fd_pipeFinCntToParent);
 pipe(fd_pipeTotGuessToChild);
 pipe(fd_pipeTotGuessToParent);
 
-printf("Morra is ancient game played by Greek and Romans for much the same reason\n\
- we play rocks, paper, scissors. The rules are simple, at the same time \n\
-all players throw their hand on the middle with any number of fingers extended \n\
-(but not none). At the same time, the players announce the number they think \n\
-all fingers will add up to. In our variation, closest without exceeding will win.  Have Fun!\n");
+printf("Morra is an ancient game played by Greek and Romans for much the same reason\n\
+we play rocks, paper, scissors today. The rules are simple, at the same time\n\
+all players throw their hand on the middle with any number of fingers extended\n\
+(but not none). At the same time, the players announce the number they think\n\
+all throws will add up to. In our variation, closest without exceeding will win. Have Fun!\n");
 
 pid = fork(); // create kiddie proc -- ::::NOTE::::remember the code from here on is run by both procs
 
@@ -140,6 +167,7 @@ else{ //child here.. do the same stuff as above, only, you know..  child safe
         fd_pipeTotGuessToParent[PIPE_WRITE]);
 }
 
+wait(0);
 return 0; //always return 0 at the end of main, it's a signal to other procs that yours ended successfully
 }
 
