@@ -25,7 +25,7 @@ typedef enum _state STATE;
 void server(int numPlayers, int readFD[3][2],int writeFD[3][2]){
   STATE state;
   state=RUNNING;
-  int curPlayer=0, runningTotal=numPlayers*4;
+  int curPlayer=2, runningTotal=numPlayers*4;
   if (DEBUG) printf("new server with pid: %d\n", getpid());
   
   while(state != QUIT){
@@ -49,7 +49,7 @@ void server(int numPlayers, int readFD[3][2],int writeFD[3][2]){
         DEF_MSG(msg, 'q', 0);// q for quit
         break;
     } //end switch
-    write(writeFD[curPlayer][1], &msg, sizeof(msg));
+    write(writeFD[curPlayer][1], &msg, sizeof(msg)); // send the OK to the child
     curPlayer = curPlayer + 1 % numPlayers;    
   } //end while
 }
@@ -67,8 +67,8 @@ void player(int isHuman, int READ, int WRITE){
   write(WRITE, &msg, sizeof(msg));
   
   while(running){
-    if (DEBUG) printf("%d reading", getpid());
-    read(READ, &msg, sizeof(msg));
+    if (DEBUG) printf("%d reading\n", getpid());
+    read(READ, &msg, sizeof(msg)); // wait for the OK from the parent
     if (DEBUG) printf("%d: read command %d with data: %d.\n", getpid(), msg.cmd, msg.data);
 
     if(msg.cmd != 'q'){
@@ -109,7 +109,7 @@ int main(){
   pid = fork();
   if (pid>0){// create computer players, 0 through seed-1
     for (i=0; i < seed; ++i){// create X times
-      printf("preparing for baby making!\n");
+      if (DEBUG) printf("preparing for baby making!\n");
       if((pids[i] = fork()) == 0){// only kids from this fork get made 
         if (DEBUG) printf("Making babies..\n");
         player(0, fd_toChild[i][PIPE_READ],fd_toParent[i][PIPE_WRITE]);
@@ -117,7 +117,7 @@ int main(){
       }else if (pids[i] < 0){
         printf("Big problems, boss.\n");
       }else{
-        printf("I'm a daddy!\n");
+        printf("Idling my time!\n");
       }
      server(seed, fd_toParent, fd_toChild);
     }

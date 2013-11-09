@@ -1,5 +1,14 @@
 #include <stdio.h> //this provides all the basic input / output stuff
 
+/**
+  *  Bill Ebeling
+  *  11/1/13
+  *
+  * I bet there's some neat math stuff to do with this game.  There are clear better / worse
+  * strategies--  I find that throwing 5 and guessing 6 is generally winning.
+  */
+
+
 //these constants exist to make later code more readable
 const int PIPE_READ=0; 
 const int PIPE_WRITE=1;
@@ -84,7 +93,7 @@ void child(int fingerRead,  int fingerWrite, int totalRead, int totalWrite){
     srvGuess = msg.data;
 
     //produce something like a game breakdown
-    printf("\nYou threw %d and guessed %d\nCmp threw %d\nReal Total was %d\n\n", numFingers, total, realTot - numFingers, realTot);
+    printf("\nYou threw %d and guessed %d\nCmp threw %d and guessed %d\nReal Total was %d\n\n", numFingers, total, realTot - numFingers, srvGuess, realTot);
 
     // determine who wins
     /*
@@ -126,9 +135,9 @@ pipe(fd_pipeFinCntToParent);
 pipe(fd_pipeTotGuessToChild);
 pipe(fd_pipeTotGuessToParent);
 
-printf("Morra is an ancient game played by Greek and Romans for much the same reason\n\
+printf("\n\nMorra is an ancient game played by Greek and Romans for much the same reason\n\
 we play rocks, paper, scissors today. The rules are simple, at the same time\n\
-all players throw their hand on the middle with any number of fingers extended\n\
+all players throw their hand in the middle with any number of fingers extended\n\
 (but not none). At the same time, the players announce the number they think\n\
 all throws will add up to. In our variation, closest without exceeding will win. Have Fun!\n");
 
