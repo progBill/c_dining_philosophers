@@ -9,11 +9,15 @@
   */
 
 #define N 5 //number of philosophers
+//below: stolen from the internet
+#define cls() printf("\033[H\033[J");
+#define position(row,col) printf( "\033[%d;%dH", (row), (col) )
+
 enum {FALSE, TRUE};
 enum {THINKING, HUNGRY, EATING};
 sem_t chops[N];
-int running=1, numRounds=1000;
-
+int running=1, numRounds=200;
+int id[N];
 /** 
   * The Philosophers
   */
@@ -23,27 +27,30 @@ int thinkUnits=0, hungerUnits=0, eatingUnits=0;
 int runCount=0, myID = *(int*) id, waiting=0;
 char* msg;
 
-//printf("New Philosopher %d!\n", myID); 
-
 while(running){
   switch(state){
     case THINKING:
       thinkUnits++;
-      if (thinkUnits%100 > 1+rand()%100){// chance to get hungry grows with time
+      if (rand()%100 < 10){// % chance 
         state= HUNGRY; 
         msg = "getting hungry!";//printf("%d is getting hungry!\n", myID);
       }
       break;
     case HUNGRY:
       hungerUnits++;
-      sem_wait(&chops[(myID+1) % N]);//right first-- must be 1 higher than myID except when myID == N, then it should be 0
-      sem_wait(&chops[myID]);//left -- must equal myID
+      if (myID % 2 == 0){//even looks right first 
+      sem_wait(&chops[(myID+1) % N]);
+      sem_wait(&chops[myID]);
+      }else{//odd looks left first
+      sem_wait(&chops[myID]);
+      sem_wait(&chops[(myID+1)%N]);
+      }
       msg = "has begun eating!";
       state=EATING;
       break;
     case EATING:
         eatingUnits++;
-        if (eatingUnits % 50 > 1+rand()%50){
+        if (rand()%100 < 5){// % chance
           sem_post(&chops[myID]);
           sem_post(&chops[(myID+1) % N]);
           state=THINKING;
@@ -63,12 +70,15 @@ if (runCount++ == numRounds) running=FALSE;
 }
 }
 
+void printer(){
+
+}
+
 // MAIN
 int main(){
   pthread_t thr[N];
   srand((long int) time(NULL));
   //printf("Seating Philosophers now.\n");
-  
   printf("id\tTRound\tstate\tThinkUnits\thungerUnits\tEatingUnits\tmessage\n");
 
   int i;
