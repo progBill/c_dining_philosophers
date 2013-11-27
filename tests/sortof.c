@@ -1,4 +1,5 @@
 //#include <stdio.h>
+#include "sortof.h"
 
 /** INSERTION SORT
   * sorts an array in it's place inefficiently and not really intuitively
@@ -20,7 +21,7 @@ void insertion(int *incInts, int numCells){
 /** SELECTION SORT 
   * finds the lowest value in array, puts it in the first position,
   * rinse, repeat
-  *
+  * CAVEAT: not really selection sort
   */
 void selection(int *incInts, int numCells){
   int i, holder, curCell=0;
@@ -36,8 +37,8 @@ void selection(int *incInts, int numCells){
   }  
 }
 
-/*
 
+/*
 void main(){
   int numElems = 10;
   int intArr[10] = {1,5,4,7,3,9,2,6,0,8};
@@ -57,5 +58,4 @@ void main(){
 }
 
 */
-
 

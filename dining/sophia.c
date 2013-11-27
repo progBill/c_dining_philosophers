@@ -70,10 +70,6 @@ if (runCount++ == numRounds) running=FALSE;
 }
 }
 
-void printer(){
-
-}
-
 // MAIN
 int main(){
   pthread_t thr[N];

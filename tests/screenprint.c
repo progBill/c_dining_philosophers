@@ -7,11 +7,19 @@
 int main(){
 cls();
 
-int i;
-for(i = 0; i < 15; i++){
-  position(5, 5);
-  printf("i: %d\n", i); 
-  sleep(1);
+printInt(5,5,10);
+printStr(6,5,'ohai');
+
+}
+
+void printInt(int row, int col, int num){
+position(row, col);
+printf("%d", num);
+}
+
+void printStr(int row, int col, char txt){
+  position(row, col);
+  printf("%s", txt);
 }
 
 }
