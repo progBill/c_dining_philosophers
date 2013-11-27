@@ -4,8 +4,8 @@
 
 //trailing is the elem in front, leading is the elem in back
 typedef struct {
-	int trailingID;
-	int leadingID;
+//	int trailingID;
+//	int leadingID;
 	int myID;}
 ELEMENT;
 
@@ -15,7 +15,7 @@ typedef struct _list{
 	int front; 
 	int rear; 
 	ELEMENT * elems;
-} LIST_HEAD;
+} LIST_HEAD, *LIST;
 
 //initializes the list
 LIST listCreate(int maxElems){
@@ -27,14 +27,11 @@ LIST listCreate(int maxElems){
 		fprintf(stderr, "Memory allocation error - LIST\n");
 		exit(0);
 	}
-	/*
 	L->elems = (ELEMENT*) calloc(maxElems, sizeof(ELEMENT));
 	if (!L->elems){
 		fprintf(stderr, "Memory allocation error - LIST\n");
 		exit(0);
 	}
-	*/
-	L->elems = ELEMENT[maxElems];
 	L->size = 0;
 	L->capacity = maxElems;
 	L->front = 0;
@@ -44,19 +41,24 @@ LIST listCreate(int maxElems){
 }
 
 //removes an element with given id
-//and assigns it's head to it's tail's head
+//and assigns prior elem to following elem
 
-void listRemoveElem(LIST L, int id){
-
-	/***********************
-	
-		You'll need to find id in the L->elems array.
-		Then do what you need to do.
-		You are using L->elems as a circular Q, so you just can't remove from 
-		the middle without moving items to fill the "hole"
-		
-	****************************/
-
+int listRemoveElem(LIST L, int findID){
+  if(L->size == 0){
+    fprintf(stderr, "There's no Elements left in your list!");
+  }else{
+    L->size--;//we'll just ignore the final element
+    int i,j;
+    for(i=0; i<L->size; i++){
+      if (L->elems[i].myID == findID){//only true once per trip through
+        //move all the elems down, erasing the current
+        for(j=i; j<L->size; j++){
+          L->elems[j] = L->elems[j+1];
+        }
+        return i;
+      }
+    }
+  }
 }
 
 //adds element to rear
@@ -64,23 +66,12 @@ void listAddElem(LIST L, int id){
 	if( L->size == L->capacity){//no vacancies
 		fprintf(stderr, "No room in the list\n");
 		return;
-	}
-	
-	L->size = L->size + 1;
-	L->rear = (L->rear + 1) % (L->capacity);
-	
-	//add id to back of line
-	//L->ELEMS is an array.  Access fields with "."
-	 
-	/********************************
-	
-	Not sure what to do with the other fields in the L->elems ELEMENT array
-	
-	********************************/
-	
-	L->elems[L->rear].myID= id;
+	}else{
+  	L->size = L->size++;
+	  L->rear = L->rear++;
+	  L->elems[L->rear].myID= id;
+  }
 }
-
 //returns id of front elem, or -1 if no elems..  I hope
 int listPeek(LIST L){
 	if (L->size==0) return -1;
@@ -97,4 +88,28 @@ void listDestroy(LIST L){
 	if ( L ) free( L );
 }
 
+void listPrint(LIST L){
+  int i;
+  for(i=0; i<L->size; i++){
+    printf("%d ", L->elems[i].myID);
+  }
+  printf("\n");
+}
+/*
+int main(){
+
+  LIST myList = listCreate(5);
+
+  listAddElem(myList, 3);
+  listAddElem(myList, 1);
+  listAddElem(myList, 2);
+  listAddElem(myList, 4);
+  listAddElem(myList, 0);
+
+  listRemoveElem(myList, 2);  
+  listPrint(myList);
+  listRemoveElem(myList, 1);
+  listPrint(myList);
+}
+*/
 

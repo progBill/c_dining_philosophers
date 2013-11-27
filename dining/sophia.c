@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <semaphore.h>
+#include "dining_list.h"
 
 /**
   * Bill Ebeling
@@ -18,6 +19,9 @@ enum {THINKING, HUNGRY, EATING};
 sem_t chops[N];
 int running=1, numRounds=200;
 int id[N];
+
+
+
 /** 
   * The Philosophers
   */
@@ -84,7 +88,6 @@ int main(){
   //printf("making threads\n");
   for (i = 0; i < N; i++){
     pthread_create(thr + i, NULL, philosopher, (void*)(&i));
-    //I think i is incrementing before the thread is done initializing
     sleep(1);
   }
   //printf("joining threads\n");
