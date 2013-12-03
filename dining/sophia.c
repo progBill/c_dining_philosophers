@@ -80,7 +80,7 @@ void relock(ELEMENT elem){
   listRemoveElem(waitingList, elem);
   //removeDiner(elem);
   sem_wait(&chops[elem.myID]);
-  sem_wait(&chops[elem.myID+1%N]);
+  sem_wait(&chops[(elem.myID+1) % N]);
 }
 
 /** 
@@ -92,7 +92,7 @@ int thinkUnits=0, hungerUnits=0, eatingUnits=0;
 int runCount=0, myID = *(int*) id, waiting=0;
 char* msg;
 
-ELEMENT me = {(myID == 0) ? N-1: myID % N - 1, myID+1%N, myID};
+ELEMENT me = {(myID == 0) ? N-1: myID % (N - 1), (myID+1) % N, myID};
 
 while(running){
   switch(state){
@@ -165,9 +165,13 @@ int main(){
     pthread_create(thr + i, NULL, philosopher, (void*)(&i));
     sleep(1);
   }
+  
+  sleep(1);
+
   for (i = 0; i < N; i++){
     pthread_join(thr[i], NULL);
   }
+
   for (i = 0; i < N; i++ ){
     sem_destroy(&chops[i]);
   }

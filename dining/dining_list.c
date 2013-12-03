@@ -29,7 +29,6 @@ int listRemoveElem(LIST L, ELEMENT elem){
   if(L->size == 0){
     fprintf(stderr, "There's no Elements left in your list!");
   }else{
-    //L->size--;//we'll just ignore the final element
     int i,j;
     for(i=0; i<L->size; i++){
       if (L->elems[i].myID == elem.myID){//only true once per trip through
