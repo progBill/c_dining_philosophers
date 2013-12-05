@@ -87,10 +87,9 @@ void listPrint(LIST L){
   int i, val;
   for(i=0; i<L->capacity; i++){
     if(i < L->size){
-     printf("\033[%d;5Helem%d:%d", (i + 10), i, L->elems[i].myID);
+     printf("\033[%d;5Helem%d:%d", (i + L->capacity +5), i, L->elems[i].myID);
     }else{
-     printf("\033[%d;5Helem%d:%d", (i + 10), i, 9);
-
+     printf("\033[%d;5Helem%d:%d", (i +L->capacity + 5), i, 9);
     }
   }
   printf("\n");

@@ -10,23 +10,19 @@
   * An attempt to model a solution to the dining philosophers problem.
   */
 
-#define N 6 //number of philosophers
+#define N 5 //number of philosophers
 enum {FALSE, TRUE};
 enum {THINKING, HUNGRY, EATING};
 
-pthread_mutex_t chops[N];
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-//  If running is univeral, it should be in a critical region!!
+sem_t chops[N];
 
 // running is universal so that when a thread gets to numRounds, they all stop
-int running=TRUE, numRounds=200000000;
+int running=TRUE, numRounds=2000;
 
 LIST waitingList;
 
 // CHANGE BELOW TO SWITCH FEEDING STRATEGY
-const int NORMAL = TRUE; 
+const int NORMAL = TRUE;
 
 // ********************** 
 ELEMENT NULLELEM;
@@ -37,7 +33,7 @@ struct {ELEMENT firstEater;
 
 int isFull(){
   // % chance
-  if (rand()%1000 < 5) return TRUE;
+  if (rand()%100 < 5) return TRUE;
   else return FALSE;
 }
 
@@ -54,17 +50,17 @@ void removeDiner(ELEMENT elem){
 
 void reserveUtensils(int myID){
   if (myID % 2 == 0){//even looks right first 
-    pthread_mutex_lock(&chops[(myID+1) % N]);
-    pthread_mutex_lock(&chops[myID]);
+    sem_wait(&chops[(myID+1) % N]);
+    sem_wait(&chops[myID]);
   }else{//odd looks left first
-    pthread_mutex_lock(&chops[myID]);
-    pthread_mutex_lock(&chops[(myID+1)%N]);
+    sem_wait(&chops[myID]);
+    sem_wait(&chops[(myID+1)%N]);
   }
 }
 
 void releaseUtensils(int myID){
-  pthread_mutex_unlock(&chops[myID]);
-  pthread_mutex_unlock(&chops[(myID+1) % N]);
+  sem_post(&chops[myID]);
+  sem_post(&chops[(myID+1) % N]);
 }
 
 void unlock(ELEMENT elem){
@@ -80,8 +76,8 @@ void unlock(ELEMENT elem){
   }
 
   if (nextID != -1){
-    pthread_mutex_unlock(&chops[nextID]);
-    pthread_mutex_unlock(&chops[(nextID+1) % N]);
+    sem_post(&chops[nextID]);
+    sem_post(&chops[(nextID+1) % N]);
     if (diners.firstEater.myID == 9) diners.firstEater = elem;
     else diners.secondEater = elem;
   }
@@ -90,8 +86,8 @@ void unlock(ELEMENT elem){
 void relock(ELEMENT elem){
   listRemoveElem(waitingList, elem);
   //removeDiner(elem);
-  pthread_mutex_lock(&chops[elem.myID]);
-  pthread_mutex_lock(&chops[(elem.myID+1) % N]);
+  sem_wait(&chops[elem.myID]);
+  sem_wait(&chops[(elem.myID+1) % N]);
 }
 
 /** 
@@ -104,13 +100,15 @@ void *philosopher(void * id){
 	int runCount=0, myID = *(int*) id, waiting=0;
 	char* msg;
 
+
+//	ELEMENT me = {(myID == 0) ? N-1: myID % (N - 1), (myID+1) % N, myID};
+
 	ELEMENT me;
 	me.right = ( myID + N - 1 ) % N;
 	me.left = (myID + 1 ) % N;
 	me.myID = myID;
 
 	while(running){
-	  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	  usleep(300000);
 	  switch(state){
 
@@ -167,20 +165,14 @@ void *philosopher(void * id){
 	  //sleep(1); 
 	  msg="";
 	  if(runCount % 10 == 0) fflush(stdout);  
-    //TODO: put line below in critical section
 	  if (runCount++ == numRounds) running=FALSE;
 	}
-
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// if  EATING when it stops, release utensils so others can unblock and exit their loops
-
-	if (EATING) releaseUtensils(me.myID);
 }
 
 // MAIN
 int main(){
   pthread_t thr[N];
-  int ids[N];
+  int ids[N] = {0, 1, 2, 3, 4};
 
   srand((long int) time(NULL));
 
@@ -188,29 +180,27 @@ int main(){
   printf("%-15s%-15s%-15s%-15s%-15s%-15s%-15s",
 	     "id","TRound","state","ThinkUnits","hungerUnits","EatingUnits","message");
 
-  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  waitingList = listCreate(N);
+  waitingList = listCreate(5);
   ELEMENT NULLELEM = {9,9,9};
   diners.firstEater = NULLELEM;
   diners.secondEater= NULLELEM;
 
   int i;
   for (i=0; i < N; i++){
-    pthread_mutex_init( &chops[i], NULL);  // this is a one item semaphore
+    sem_init( &chops[i], FALSE, 1);  // this is a one item semaphore
     // make sure they do not link to same local variable
-
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ids[i] = i;
     pthread_create(thr + i, NULL, philosopher, (void*)(ids+i));
     sleep(1);
   }
   
+  sleep(1);
+
   for (i = 0; i < N; i++){
     pthread_join(thr[i], NULL);
   }
 
   for (i = 0; i < N; i++ ){
-    pthread_mutex_destroy(&chops[i]);
+    sem_destroy(&chops[i]);
   }
 
   printf("OK, bye\n");
